@@ -68,27 +68,42 @@
 }
 
 function populateServerList(data) {
-    const serverListBody = document.getElementById('server-list-body');
-    var getPlayers = true;
+    organizeServerData("echo_arena", data);
+    organizeServerData("echo_combat", data);
+    organizeServerData("social_2.0", data);
+    organizeServerData("echo_arena_private", data);
+    organizeServerData("echo_combat_private", data);
+    organizeServerData("social_2.0_private", data);
+}
+
+function showPlayerList(event, playerListId) {
+    const playerList = document.getElementById(playerListId);
+    playerList.style.display = 'block';
+    playerList.style.top = event.clientY + 'px';
+    playerList.style.left = event.clientX + 'px';
+}
+
+function hidePlayerList(playerListId) {
+    const playerList = document.getElementById(playerListId);
+    playerList.style.display = 'none';
+}
+
+function organizeServerData(mode, data)
+{
+	var getPlayers = true;
 	var isArena;
-    for (let i = 0; i < data.matches.length; i++) {
+	const serverListBody = document.getElementById('server-list-body');
+	for (let i = 0; i < data.matches.length; i++) {
         const server = data.matches[i];
         const row = document.createElement('tr');
+        if(mode != server.mode) { 
+          console.log("Server isn't in order!");
+          continue; 
+          
+        }
         switch(server.mode)
         {
-            case "echo_arena":
-                server.mode = "Arena Match";
-                server.id = server.id.slice(0, -16);
-                isArena = true;
-                getPlayers = true;
-                break;
-            case "social_2.0":
-                server.mode = "Social Lobby";
-                server.id = server.id.slice(0, -16);
-                isArena=false;
-                getPlayers = true;
-                break;
-            case "echo_arena_private":
+        	case "echo_arena_private":
             {
             	server.mode = "Private Match";
                 server.id = "Private ID's cannot be displayed"
@@ -96,6 +111,44 @@ function populateServerList(data) {
                 getPlayers = false;
                 break;
             }
+            case "echo_combat_private":
+            {
+            	server.mode = "Private Combat";
+                server.id = "Private ID's cannot be displayed"
+                server.player_count = "Private"
+                getPlayers = false;
+                break;
+            }
+            case "social_2.0_private":
+            {
+            	server.mode = "Private Lobby";
+                server.id = "Private ID's cannot be displayed"
+                server.player_count = "Private"
+                getPlayers = false;
+                break;
+            }
+            case "echo_arena":
+                server.mode = "Arena Match";
+                server.id = server.id.slice(0, -16);
+                isArena = true;
+                getPlayers = !true;
+                break;
+            case "social_2.0":
+                server.mode = "Social Lobby";
+                server.id = server.id.slice(0, -16);
+                isArena=false;
+                getPlayers = true;
+                break;
+            case "echo_combat":
+            {
+            	if(server.lobby_type != "private") {
+                  server.mode = "Combat Match";
+                  server.id = server.id.slice(0, -16);
+                  getPlayers = true;
+                  break;
+                }
+            }
+            
 		}
         row.innerHTML = `
             <td>${server.id}</td>
@@ -125,18 +178,6 @@ function populateServerList(data) {
 
         document.body.appendChild(playerListDiv);
     }
-}
-
-function showPlayerList(event, playerListId) {
-    const playerList = document.getElementById(playerListId);
-    playerList.style.display = 'block';
-    playerList.style.top = event.clientY + 'px';
-    playerList.style.left = event.clientX + 'px';
-}
-
-function hidePlayerList(playerListId) {
-    const playerList = document.getElementById(playerListId);
-    playerList.style.display = 'none';
 }
 
 fetchServerData().then(data => {
