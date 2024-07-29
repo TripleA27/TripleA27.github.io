@@ -141,12 +141,10 @@ function organizeServerData(mode, data)
                 break;
             case "echo_combat":
             {
-            	if(server.lobby_type != "private") {
-                  server.mode = "Combat Match";
-                  server.id = server.id.slice(0, -16);
-                  getPlayers = true;
+                  	server.mode = "Combat Match";
+                  	server.id = server.id.slice(0, -16);
+                  	getPlayers = true;
                   break;
-                }
             }
             
 		}
@@ -161,7 +159,7 @@ function organizeServerData(mode, data)
         const playerListDiv = document.createElement('div');
         playerListDiv.id = `players-${server.id}`;
         playerListDiv.className = 'player-list';
-		if(getPlayers == true) {
+		if(getPlayers == true || server.players) {
           for (let j = 0; j < server.players.length; j++) {
               const player = server.players[j];
               const playerElement = document.createElement('p');
