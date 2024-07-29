@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server List</title>
     <style>
+    	h1 {text-align: center;}
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -22,7 +23,7 @@
             text-align: center;
         }
         .server-list th {
-            background-color: #4CAF50;
+            background-color: #444;
             color: white;
         }
         .server-list td {
@@ -40,10 +41,12 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             padding: 10px;
             z-index: 1000;
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
+	<h1>VRCE Server List</h1>
     <table class="server-list">
         <thead>
             <tr>
@@ -54,60 +57,92 @@
             </tr>
         </thead>
         <tbody id="server-list-body">
-            <!-- Data will be inserted here by JavaScript -->
         </tbody>
     </table>
 
     <script>
         async function fetchServerData() {
-            const response = await fetch('https://example.com/api/servers'); // Replace with your server's API endpoint
-            const data = await response.json();
-            return data;
+    const response = await fetch('https://g.echovrce.com/status/matches'); 
+    const data = await response.json();
+    return data;
+}
+
+function populateServerList(data) {
+    const serverListBody = document.getElementById('server-list-body');
+    var getPlayers = true;
+	var isArena;
+    for (let i = 0; i < data.matches.length; i++) {
+        const server = data.matches[i];
+        const row = document.createElement('tr');
+        switch(server.mode)
+        {
+            case "echo_arena":
+                server.mode = "Arena Match";
+                server.id = server.id.slice(0, -16);
+                isArena = true;
+                getPlayers = true;
+                break;
+            case "social_2.0":
+                server.mode = "Social Lobby";
+                server.id = server.id.slice(0, -16);
+                isArena=false;
+                getPlayers = true;
+                break;
+            case "echo_arena_private":
+            {
+            	server.mode = "Private Match";
+                server.id = "Private ID's cannot be displayed"
+                server.player_count = "Private"
+                getPlayers = false;
+                break;
+            }
+		}
+        row.innerHTML = `
+            <td>${server.id}</td>
+            <td>${server.player_limit}</td>
+            <td onmouseover="showPlayerList(event, 'players-${server.id}')" onmouseout="hidePlayerList('players-${server.id}')">${server.player_count}</td>
+            <td>${server.mode}</td>
+        `;
+        serverListBody.appendChild(row);
+
+        const playerListDiv = document.createElement('div');
+        playerListDiv.id = `players-${server.id}`;
+        playerListDiv.className = 'player-list';
+		if(getPlayers == true) {
+          for (let j = 0; j < server.players.length; j++) {
+              const player = server.players[j];
+              const playerElement = document.createElement('p');
+              playerElement.textContent = player.display_name;
+              if(isArena)
+              {
+                  player.team = player.team[0].toUpperCase() + player.team.slice(1);
+                  playerElement.textContent = player.display_name + " [" + player.team + "]";
+              }
+
+              playerListDiv.appendChild(playerElement);
+          }
         }
 
-        function populateServerList(data) {
-            const serverListBody = document.getElementById('server-list-body');
+        document.body.appendChild(playerListDiv);
+    }
+}
 
-            data.matches.forEach(server => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${server.id}</td>
-                    <td>${server.player_limit}</td>
-                    <td onmouseover="showPlayerList(event, 'players-${server.id}')" onmouseout="hidePlayerList('players-${server.id}')">${server.player_count}</td>
-                    <td>${server.mode}</td>
-                `;
-                serverListBody.appendChild(row);
+function showPlayerList(event, playerListId) {
+    const playerList = document.getElementById(playerListId);
+    playerList.style.display = 'block';
+    playerList.style.top = event.clientY + 'px';
+    playerList.style.left = event.clientX + 'px';
+}
 
-                const playerListDiv = document.createElement('div');
-                playerListDiv.id = `players-${server.id}`;
-                playerListDiv.className = 'player-list';
+function hidePlayerList(playerListId) {
+    const playerList = document.getElementById(playerListId);
+    playerList.style.display = 'none';
+}
 
-                server.players.forEach(player => {
-                    const playerElement = document.createElement('p');
-                    playerElement.textContent = player.display_name;
-                    playerListDiv.appendChild(playerElement);
-                });
+fetchServerData().then(data => {
+    populateServerList(data);
+});
 
-                document.body.appendChild(playerListDiv);
-            });
-        }
-
-        function showPlayerList(event, playerListId) {
-            const playerList = document.getElementById(playerListId);
-            playerList.style.display = 'block';
-            playerList.style.top = event.clientY + 'px';
-            playerList.style.left = event.clientX + 'px';
-        }
-
-        function hidePlayerList(playerListId) {
-            const playerList = document.getElementById(playerListId);
-            playerList.style.display = 'none';
-        }
-
-        // Fetch and display the server data
-        fetchServerData().then(data => {
-            populateServerList(data);
-        });
     </script>
 </body>
 </html>
