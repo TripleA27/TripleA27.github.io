@@ -44,10 +44,31 @@
             z-index: 1000;
             pointer-events: none;
         }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #888
+        }
     </style>
 </head>
 <body>
 	<h1>VRCE Server List</h1>
+    <div class="container">
+    	<button id="ref">Refresh</button>
+    </div>
     <table class="server-list">
         <thead>
             <tr>
@@ -62,10 +83,19 @@
     </table>
 	<p id="lastUpdated">Last updated now</p>
     <script>
+    document.getElementById("ref").addEventListener("click", refreshList);
         async function fetchServerData() {
     const response = await fetch('https://g.echovrce.com/status/matches'); 
     const data = await response.json();
     return data;
+}
+
+function refreshList()
+{
+	clearBody();
+  fetchServerData().then(data => {
+      populateServerList(data);
+  });
 }
 
 function clearBody()
@@ -81,7 +111,7 @@ function updateTime()
 	const textBox = document.getElementById("lastUpdated");
 	const currentTime = new Date();
 	const hours = currentTime.getHours();
-	const minutes = currentTime.getMinutes();
+	const minutes = currentTime.getMinutes().toString().padStart(2, '0');
 
 	lastUpdated.textContent = (`Last updated at ${hours}:${minutes}`);
 }
@@ -114,8 +144,8 @@ function organizeServerData(mode, data)
 	var getPlayers = true;
 	var isArena;
 	const serverListBody = document.getElementById('server-list-body');
-	for (let i = 0; i < data.matches.length; i++) {
-        const server = data.matches[i];
+	for (let i = 0; i < data.labels.length; i++) {
+        const server = data.labels[i];
         const row = document.createElement('tr');
         if(mode != server.mode) { 
           console.log("Server isn't in order!");
@@ -202,10 +232,7 @@ fetchServerData().then(data => {
       populateServerList(data);
   });
 setInterval(function() {
-	clearBody();
-  fetchServerData().then(data => {
-      populateServerList(data);
-  });
+	refreshPage();
 }, 30000)
 
     </script>
