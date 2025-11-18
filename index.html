@@ -1,240 +1,123 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Server List</title>
+    <title>Random Pitch Generator (iOS Background Supported)</title>
     <style>
-    	h1 {text-align: center;}
-        p {text-align: center;}
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
+            font-family: Arial;
+            padding: 20px;
         }
-        .server-list {
-            width: 80%;
-            margin: 20px auto;
-            border-collapse: collapse;
-        }
-        .server-list th, .server-list td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-        .server-list th {
-            background-color: #444;
-            color: white;
-        }
-        .server-list td {
-            background-color: white;
-            cursor: pointer;
-        }
-        .server-list tr:hover td {
-            background-color: #f1f1f1;
-        }
-        .player-list {
-            display: none;
-            position: absolute;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            padding: 10px;
-            z-index: 1000;
-            pointer-events: none;
-        }
-        .container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: #444;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #888
+        .slider-box {
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-	<h1>VRCE Server List</h1>
-    <div class="container">
-    	<button id="ref">Refresh</button>
+
+    <h1>Random Pitch Generator</h1>
+
+    <!-- Hidden audio element required for iOS background playback -->
+    <audio id="bgAudio" autoplay playsinline style="display:none"></audio>
+
+    <div class="slider-box">
+        <label>Rate (notes per second): <span id="rateValue">2</span></label><br>
+        <input type="range" id="rateSlider" min="1" max="20" value="2">
     </div>
-    <table class="server-list">
-        <thead>
-            <tr>
-                <th>Server ID</th>
-                <th>Max Players</th>
-                <th>Player Count</th>
-                <th>Mode</th>
-            </tr>
-        </thead>
-        <tbody id="server-list-body">
-        </tbody>
-    </table>
-	<p id="lastUpdated">Last updated now</p>
+
+    <div class="slider-box">
+        <label>Pitch Range: <span id="rangeValue">200–800 Hz</span></label><br>
+        Min: <input type="range" id="minPitch" min="50" max="2000" value="200">
+        Max: <input type="range" id="maxPitch" min="50" max="2000" value="800">
+    </div>
+
+    <button id="toggleBtn">Start</button>
+
     <script>
-    document.getElementById("ref").addEventListener("click", refreshList);
-        async function fetchServerData() {
-    const response = await fetch('https://g.echovrce.com/status/matches'); 
-    const data = await response.json();
-    return data;
-}
+        let audioCtx = null;
+        let destination = null;   // MediaStreamDestination for iOS background audio
+        let intervalID = null;
 
-function refreshList()
-{
-	clearBody();
-  fetchServerData().then(data => {
-      populateServerList(data);
-  });
-}
+        const rateSlider = document.getElementById("rateSlider");
+        const rateValue = document.getElementById("rateValue");
 
-function clearBody()
-{
-	const serverListBody = document.getElementById('server-list-body');
-    while (serverListBody.firstChild) {
-    	serverListBody.removeChild(serverListBody.firstChild);
-    }
-}
+        const minPitch = document.getElementById("minPitch");
+        const maxPitch = document.getElementById("maxPitch");
+        const rangeValue = document.getElementById("rangeValue");
 
-function updateTime()
-{
-	const textBox = document.getElementById("lastUpdated");
-	const currentTime = new Date();
-	const hours = currentTime.getHours();
-	const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+        const toggleBtn = document.getElementById("toggleBtn");
+        const bgAudio = document.getElementById("bgAudio");
 
-	lastUpdated.textContent = (`Last updated at ${hours}:${minutes}`);
-}
+        // Update text values
+        rateSlider.oninput = () => rateValue.textContent = rateSlider.value;
+        minPitch.oninput = updateRangeText;
+        maxPitch.oninput = updateRangeText;
 
-
-function populateServerList(data) {
-    organizeServerData("echo_arena", data);
-    organizeServerData("echo_combat", data);
-    organizeServerData("social_2.0", data);
-    organizeServerData("echo_arena_private", data);
-    organizeServerData("echo_combat_private", data);
-    organizeServerData("social_2.0_private", data);
-    updateTime();
-}
-
-function showPlayerList(event, playerListId) {
-    const playerList = document.getElementById(playerListId);
-    playerList.style.display = 'block';
-    playerList.style.top = event.clientY + 'px';
-    playerList.style.left = event.clientX + 'px';
-}
-
-function hidePlayerList(playerListId) {
-    const playerList = document.getElementById(playerListId);
-    playerList.style.display = 'none';
-}
-
-function organizeServerData(mode, data)
-{
-	var getPlayers = true;
-	var isArena;
-	const serverListBody = document.getElementById('server-list-body');
-	for (let i = 0; i < data.labels.length; i++) {
-        const server = data.labels[i];
-        const row = document.createElement('tr');
-        if(mode != server.mode) { 
-          console.log("Server isn't in order!");
-          continue; 
-          
-        }
-        switch(server.mode)
-        {
-        	case "echo_arena_private":
-            {
-            	server.mode = "Private Match";
-                server.id = "Private ID's cannot be displayed"
-                server.player_count = "Private"
-                getPlayers = false;
-                break;
-            }
-            case "echo_combat_private":
-            {
-            	server.mode = "Private Combat";
-                server.id = "Private ID's cannot be displayed"
-                server.player_count = "Private"
-                getPlayers = false;
-                break;
-            }
-            case "social_2.0_private":
-            {
-            	server.mode = "Private Lobby";
-                server.id = "Private ID's cannot be displayed"
-                server.player_count = "Private"
-                getPlayers = false;
-                break;
-            }
-            case "echo_arena":
-                server.mode = "Arena Match";
-                server.id = server.id.slice(0, -16);
-                isArena = true;
-                getPlayers = !true;
-                break;
-            case "social_2.0":
-                server.mode = "Social Lobby";
-                server.id = server.id.slice(0, -16);
-                isArena=false;
-                getPlayers = true;
-                break;
-            case "echo_combat":
-            {
-                  	server.mode = "Combat Match";
-                  	server.id = server.id.slice(0, -16);
-                  	getPlayers = true;
-                  break;
-            }
-            
-		}
-        row.innerHTML = `
-            <td>${server.id}</td>
-            <td>${server.player_limit}</td>
-            <td onmouseover="showPlayerList(event, 'players-${server.id}')" onmouseout="hidePlayerList('players-${server.id}')">${server.player_count}</td>
-            <td>${server.mode}</td>
-        `;
-        serverListBody.appendChild(row);
-
-        const playerListDiv = document.createElement('div');
-        playerListDiv.id = `players-${server.id}`;
-        playerListDiv.className = 'player-list';
-		if(getPlayers == true || server.players) {
-          for (let j = 0; j < server.players.length; j++) {
-              const player = server.players[j];
-              const playerElement = document.createElement('p');
-              playerElement.textContent = player.display_name;
-              if(isArena)
-              {
-                  player.team = player.team[0].toUpperCase() + player.team.slice(1);
-                  playerElement.textContent = player.display_name + " [" + player.team + "]";
-              }
-
-              playerListDiv.appendChild(playerElement);
-          }
+        function updateRangeText() {
+            rangeValue.textContent = `${minPitch.value}–${maxPitch.value} Hz`;
         }
 
-        document.body.appendChild(playerListDiv);
-    }
-}
-fetchServerData().then(data => {
-      populateServerList(data);
-  });
-setInterval(function() {
-	refreshPage();
-}, 30000)
+        function initAudioForiOS() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+                // Create MediaStreamDestination for background playback
+                destination = audioCtx.createMediaStreamDestination();
+                bgAudio.srcObject = destination.stream;
+
+                // iOS requires manual play() after user gesture
+                bgAudio.play().catch(e => console.log("bgAudio play blocked:", e));
+                audioCtx.resume();
+            }
+        }
+
+        function playRandomPitch() {
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            // Random frequency in selected range
+            const min = Number(minPitch.value);
+            const max = Number(maxPitch.value);
+            osc.frequency.value = Math.random() * (max - min) + min;
+
+            gainNode.gain.value = 0.2;
+
+            osc.connect(gainNode);
+
+            // Connect to the iOS-friendly destination (NOT audioCtx.destination)
+            gainNode.connect(destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.2);
+        }
+
+        toggleBtn.onclick = () => {
+            if (intervalID) {
+                clearInterval(intervalID);
+                intervalID = null;
+                toggleBtn.textContent = "Start";
+                return;
+            }
+
+            // Initialize audio with iOS background support
+            initAudioForiOS();
+
+            const rate = () => 1000 / Number(rateSlider.value);
+
+            playRandomPitch(); 
+            intervalID = setInterval(playRandomPitch, rate());
+            toggleBtn.textContent = "Stop";
+
+            // Dynamic rate updating
+            rateSlider.oninput = () => {
+                rateValue.textContent = rateSlider.value;
+                if (intervalID) {
+                    clearInterval(intervalID);
+                    intervalID = setInterval(playRandomPitch, rate());
+                }
+            };
+        };
     </script>
+
 </body>
 </html>
