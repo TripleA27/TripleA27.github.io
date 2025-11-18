@@ -1,1 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server List</title>
+    <style>
+    	h1 {text-align: center;}
+        p {text-align: center;}
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .server-list {
+            width: 80%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        .server-list th, .server-list td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .server-list th {
+            background-color: #444;
+            color: white;
+        }
+        .server-list td {
+            background-color: white;
+            cursor: pointer;
+        }
+        .server-list tr:hover td {
+            background-color: #f1f1f1;
+        }
+        .player-list {
+            display: none;
+            position: absolute;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 10px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
 
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #888
+        }
+    </style>
+</head>
+<body>
+	<h1>VRCE Server List</h1>
+    <div class="container">
+    	<button id="ref">Refresh</button>
+    </div>
+    <table class="server-list">
+        <thead>
+            <tr>
+                <th>Server ID</th>
+                <th>Max Players</th>
+                <th>Player Count</th>
+                <th>Mode</th>
+            </tr>
+        </thead>
+        <tbody id="server-list-body">
+        </tbody>
+    </table>
+	<p id="lastUpdated">Last updated now</p>
+    <script>
+    document.getElementById("ref").addEventListener("click", refreshList);
+        async function fetchServerData() {
+    const response = await fetch('https://g.echovrce.com/status/matches'); 
+    const data = await response.json();
+    return data;
+}
+
+function refreshList()
+{
+	clearBody();
+  fetchServerData().then(data => {
+      populateServerList(data);
+  });
+}
+
+function clearBody()
+{
+	const serverListBody = document.getElementById('server-list-body');
+    while (serverListBody.firstChild) {
+    	serverListBody.removeChild(serverListBody.firstChild);
+    }
+}
+
+function updateTime()
+{
+	const textBox = document.getElementById("lastUpdated");
+	const currentTime = new Date();
+	const hours = currentTime.getHours();
+	const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+
+	lastUpdated.textContent = (`Last updated at ${hours}:${minutes}`);
+}
+
+
+function populateServerList(data) {
+    organizeServerData("echo_arena", data);
+    organizeServerData("echo_combat", data);
+    organizeServerData("social_2.0", data);
+    organizeServerData("echo_arena_private", data);
+    organizeServerData("echo_combat_private", data);
+    organizeServerData("social_2.0_private", data);
+    updateTime();
+}
+
+function showPlayerList(event, playerListId) {
+    const playerList = document.getElementById(playerListId);
+    playerList.style.display = 'block';
+    playerList.style.top = event.clientY + 'px';
+    playerList.style.left = event.clientX + 'px';
+}
+
+function hidePlayerList(playerListId) {
+    const playerList = document.getElementById(playerListId);
+    playerList.style.display = 'none';
+}
+
+function organizeServerData(mode, data)
+{
+	var getPlayers = true;
+	var isArena;
+	const serverListBody = document.getElementById('server-list-body');
+	for (let i = 0; i < data.labels.length; i++) {
+        const server = data.labels[i];
+        const row = document.createElement('tr');
+        if(mode != server.mode) { 
+          console.log("Server isn't in order!");
+          continue; 
+          
+        }
+        switch(server.mode)
+        {
+        	case "echo_arena_private":
+            {
+            	server.mode = "Private Match";
+                server.id = "Private ID's cannot be displayed"
+                server.player_count = "Private"
+                getPlayers = false;
+                break;
+            }
+            case "echo_combat_private":
+            {
+            	server.mode = "Private Combat";
+                server.id = "Private ID's cannot be displayed"
+                server.player_count = "Private"
+                getPlayers = false;
+                break;
+            }
+            case "social_2.0_private":
+            {
+            	server.mode = "Private Lobby";
+                server.id = "Private ID's cannot be displayed"
+                server.player_count = "Private"
+                getPlayers = false;
+                break;
+            }
+            case "echo_arena":
+                server.mode = "Arena Match";
+                server.id = server.id.slice(0, -16);
+                isArena = true;
+                getPlayers = !true;
+                break;
+            case "social_2.0":
+                server.mode = "Social Lobby";
+                server.id = server.id.slice(0, -16);
+                isArena=false;
+                getPlayers = true;
+                break;
+            case "echo_combat":
+            {
+                  	server.mode = "Combat Match";
+                  	server.id = server.id.slice(0, -16);
+                  	getPlayers = true;
+                  break;
+            }
+            
+		}
+        row.innerHTML = `
+            <td>${server.id}</td>
+            <td>${server.player_limit}</td>
+            <td onmouseover="showPlayerList(event, 'players-${server.id}')" onmouseout="hidePlayerList('players-${server.id}')">${server.player_count}</td>
+            <td>${server.mode}</td>
+        `;
+        serverListBody.appendChild(row);
+
+        const playerListDiv = document.createElement('div');
+        playerListDiv.id = `players-${server.id}`;
+        playerListDiv.className = 'player-list';
+		if(getPlayers == true || server.players) {
+          for (let j = 0; j < server.players.length; j++) {
+              const player = server.players[j];
+              const playerElement = document.createElement('p');
+              playerElement.textContent = player.display_name;
+              if(isArena)
+              {
+                  player.team = player.team[0].toUpperCase() + player.team.slice(1);
+                  playerElement.textContent = player.display_name + " [" + player.team + "]";
+              }
+
+              playerListDiv.appendChild(playerElement);
+          }
+        }
+
+        document.body.appendChild(playerListDiv);
+    }
+}
+fetchServerData().then(data => {
+      populateServerList(data);
+  });
+setInterval(function() {
+	refreshPage();
+}, 30000)
+
+    </script>
+</body>
+</html>
