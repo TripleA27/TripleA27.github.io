@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Random Pitch Generator (iOS Background Supported)</title>
+    <title>VRFS API FAKE RESPONSES</title>
     <style>
         body {
             font-family: Arial;
@@ -14,110 +14,7 @@
     </style>
 </head>
 <body>
-
-    <h1>Random Pitch Generator</h1>
-
-    <!-- Hidden audio element required for iOS background playback -->
-    <audio id="bgAudio" autoplay playsinline style="display:none"></audio>
-
-    <div class="slider-box">
-        <label>Rate (notes per second): <span id="rateValue">2</span></label><br>
-        <input type="range" id="rateSlider" min="1" max="20" value="2">
-    </div>
-
-    <div class="slider-box">
-        <label>Pitch Range: <span id="rangeValue">200–800 Hz</span></label><br>
-        Min: <input type="range" id="minPitch" min="50" max="2000" value="200">
-        Max: <input type="range" id="maxPitch" min="50" max="2000" value="800">
-    </div>
-
-    <button id="toggleBtn">Start</button>
-
-    <script>
-        let audioCtx = null;
-        let destination = null;   // MediaStreamDestination for iOS background audio
-        let intervalID = null;
-
-        const rateSlider = document.getElementById("rateSlider");
-        const rateValue = document.getElementById("rateValue");
-
-        const minPitch = document.getElementById("minPitch");
-        const maxPitch = document.getElementById("maxPitch");
-        const rangeValue = document.getElementById("rangeValue");
-
-        const toggleBtn = document.getElementById("toggleBtn");
-        const bgAudio = document.getElementById("bgAudio");
-
-        // Update text values
-        rateSlider.oninput = () => rateValue.textContent = rateSlider.value;
-        minPitch.oninput = updateRangeText;
-        maxPitch.oninput = updateRangeText;
-
-        function updateRangeText() {
-            rangeValue.textContent = `${minPitch.value}–${maxPitch.value} Hz`;
-        }
-
-        function initAudioForiOS() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
-                // Create MediaStreamDestination for background playback
-                destination = audioCtx.createMediaStreamDestination();
-                bgAudio.srcObject = destination.stream;
-
-                // iOS requires manual play() after user gesture
-                bgAudio.play().catch(e => console.log("bgAudio play blocked:", e));
-                audioCtx.resume();
-            }
-        }
-
-        function playRandomPitch() {
-            const osc = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            // Random frequency in selected range
-            const min = Number(minPitch.value);
-            const max = Number(maxPitch.value);
-            osc.frequency.value = Math.random() * (max - min) + min;
-
-            gainNode.gain.value = 0.2;
-
-            osc.connect(gainNode);
-
-            // Connect to the iOS-friendly destination (NOT audioCtx.destination)
-            gainNode.connect(destination);
-
-            osc.start();
-            osc.stop(audioCtx.currentTime + 0.2);
-        }
-
-        toggleBtn.onclick = () => {
-            if (intervalID) {
-                clearInterval(intervalID);
-                intervalID = null;
-                toggleBtn.textContent = "Start";
-                return;
-            }
-
-            // Initialize audio with iOS background support
-            initAudioForiOS();
-
-            const rate = () => 1000 / Number(rateSlider.value);
-
-            playRandomPitch(); 
-            intervalID = setInterval(playRandomPitch, rate());
-            toggleBtn.textContent = "Stop";
-
-            // Dynamic rate updating
-            rateSlider.oninput = () => {
-                rateValue.textContent = rateSlider.value;
-                if (intervalID) {
-                    clearInterval(intervalID);
-                    intervalID = setInterval(playRandomPitch, rate());
-                }
-            };
-        };
-    </script>
-
+    <h1>FAKES VRFS API RESPONSES</h1>
 </body>
 </html>
+
